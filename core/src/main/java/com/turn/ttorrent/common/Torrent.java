@@ -15,10 +15,6 @@
  */
 package com.turn.ttorrent.common;
 
-import com.turn.ttorrent.bcodec.BDecoder;
-import com.turn.ttorrent.bcodec.BEValue;
-import com.turn.ttorrent.bcodec.BEncoder;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -26,7 +22,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -52,6 +47,12 @@ import java.util.concurrent.Future;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.bcodec.BDecoder;
+import com.turn.ttorrent.bcodec.BEValue;
+import com.turn.ttorrent.bcodec.BEncoder;
+import com.turn.ttorrent.client.filter.DefaultFileFilter;
+import com.turn.ttorrent.client.filter.TorrentFileFilter;
 
 /**
  * A torrent file tracked by the controller's BitTorrent tracker.
@@ -97,6 +98,17 @@ public class Torrent {
 			this.file = file;
 			this.size = size;
 		}
+
+		public File getFile()
+		{
+			return file;
+		}
+
+		public long getSize()
+		{
+			return size;
+		}
+		
 	}
 
 
@@ -120,6 +132,8 @@ public class Torrent {
 	protected final List<TorrentFile> files;
 
 	private final boolean seeder;
+	
+	private TorrentFileFilter fileFilter = new DefaultFileFilter();
 
 	/**
 	 * Create a new torrent from meta-info binary data.
@@ -223,9 +237,12 @@ public class Torrent {
 					path.append(File.separator)
 						.append(pathElement.getString());
 				}
-				this.files.add(new TorrentFile(
-					new File(this.name, path.toString()),
-					fileInfo.get("length").getLong()));
+				TorrentFile tf = new TorrentFile(
+						new File(this.name, path.toString()),
+						fileInfo.get("length").getLong());
+				if (fileFilter.accept(tf)) {
+					this.files.add(tf);
+				}
 			}
 		} else {
 			// For single-file torrents, the name of the torrent is
